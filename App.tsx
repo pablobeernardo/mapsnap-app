@@ -1,15 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  Modal,
+  TextInput,
+  Button,
+  Image,
+} from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import * as Location from 'expo-location';
 import { Camera } from 'expo-camera';
+import * as MediaLibrary from 'expo-media-library';
+import { Keyboard } from 'react-native';
+
 
 const App = () => {
   const [markers, setMarkers] = useState([]);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [isCameraVisible, setCameraVisible] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [markerImageUri, setMarkerImageUri] = useState(null);
+  const [markerTitle, setMarkerTitle] = useState('');
+  const [markerDescription, setMarkerDescription] = useState('');
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
+
   const cameraRef = useRef(null);
 
   useEffect(() => {
@@ -37,10 +58,21 @@ const App = () => {
         id: markers.length.toString(),
         coordinate: currentLocation,
         imageUri: capturedImage,
+        title: '',
+        description: '',
       };
       setMarkers([...markers, newMarker]);
     }
     setCameraVisible(false);
+  };
+
+  const saveToGallery = async (photoUri) => {
+    try {
+      await MediaLibrary.saveToLibraryAsync(photoUri);
+      console.log('Imagem salva na galeria');
+    } catch (error) {
+      console.log('Erro ao salvar imagem na galeria:', error);
+    }
   };
 
   const handleOpenCamera = async () => {
@@ -55,9 +87,54 @@ const App = () => {
   const handleCaptureImage = async () => {
     if (cameraRef.current) {
       const photo = await cameraRef.current.takePictureAsync();
+      await saveToGallery(photo.uri);
+
+      const newMarker = {
+        id: markers.length.toString(),
+        coordinate: currentLocation,
+        imageUri: photo.uri,
+        title: '',
+        description: '',
+      };
+      setMarkers([...markers, newMarker]);
+
       setCapturedImage(photo.uri);
+      setCameraVisible(false);
       handleAddMarker();
     }
+  };
+
+  const renderMarkerCallout = (marker) => (
+    <TouchableOpacity onPress={dismissKeyboard}>
+      <Image source={{ uri: marker.imageUri }} style={styles.markerImage} />
+      <Text style={{ textAlign: 'center' , fontWeight:'bold', fontStyle:'italic', color:'#303F9F'}}>{marker.title}</Text>
+    </TouchableOpacity>
+  );
+
+
+  const handleMarkerPress = (marker) => {
+    setMarkerImageUri(marker.imageUri);
+    setMarkerTitle(marker.title);
+    setMarkerDescription(marker.description);
+    setModalVisible(true);
+  };
+
+  const handleSaveMarker = () => {
+    const updatedMarkers = markers.map((marker) => {
+      if (marker.imageUri === markerImageUri) {
+        return {
+          ...marker,
+          title: markerTitle,
+          description: markerDescription,
+        };
+      }
+      return marker;
+    });
+
+    setMarkers(updatedMarkers);
+    setModalVisible(false);
+    dismissKeyboard();
+
   };
 
   return (
@@ -72,12 +149,14 @@ const App = () => {
             longitudeDelta: 0.0421,
           }}
         >
-          {markers.map(marker => (
+          {markers.map((marker) => (
             <Marker
               key={marker.id}
               coordinate={marker.coordinate}
-              image={marker.imageUri}
-            />
+              onPress={() => handleMarkerPress(marker)}
+            >
+              {renderMarkerCallout(marker)}
+            </Marker>
           ))}
         </MapView>
       ) : (
@@ -95,16 +174,47 @@ const App = () => {
       {isCameraVisible && (
         <Camera
           ref={cameraRef}
-          style={styles.camera}
+          style={StyleSheet.absoluteFillObject}
           type={Camera.Constants.Type['back']}
           onCameraReady={() => console.log('Câmera pronta')}
-          onMountError={error => console.log('Erro ao montar a câmera:', error)}
+          onMountError={(error) => console.log('Erro ao montar a câmera:', error)}
         >
           <TouchableOpacity style={styles.captureButton} onPress={handleCaptureImage}>
             <Text style={styles.captureButtonText}>Capturar</Text>
           </TouchableOpacity>
         </Camera>
       )}
+
+
+      <Modal visible={isModalVisible} animationType="slide" transparent={true}>
+        <TouchableOpacity activeOpacity={1} style={styles.modalContainer} onPress={dismissKeyboard}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              {markerImageUri && (
+                <Image
+                  source={{ uri: markerImageUri }}
+                  style={styles.modalImage}
+                />
+              )}
+              <TextInput
+                style={styles.input}
+                placeholder="Título"
+                value={markerTitle}
+                onChangeText={setMarkerTitle}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Descrição"
+                value={markerDescription}
+                onChangeText={setMarkerDescription}
+                multiline={true}
+              />
+              <Button title="Salvar" onPress={handleSaveMarker} />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+      </Modal>
     </View>
   );
 };
@@ -121,6 +231,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textAlignVertical: 'center',
     fontSize: 16,
+    marginTop: 320,
   },
   buttonContainer: {
     position: 'absolute',
@@ -149,6 +260,38 @@ const styles = StyleSheet.create({
   },
   captureButtonText: {
     color: '#FFFFFF',
+  },
+  markerImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    resizeMode: 'cover',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+  },
+  modalImage: {
+    width: 250,
+    height: 250,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignSelf: 'center',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
   },
 });
 

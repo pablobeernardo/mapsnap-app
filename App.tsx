@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,13 +8,13 @@ import {
   Button,
   Image,
 } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
 import MapView, { Marker } from 'react-native-maps';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import * as Location from 'expo-location';
 import { Camera } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
 import { Keyboard } from 'react-native';
-
 
 const App = () => {
   const [markers, setMarkers] = useState([]);
@@ -26,10 +25,11 @@ const App = () => {
   const [markerImageUri, setMarkerImageUri] = useState(null);
   const [markerTitle, setMarkerTitle] = useState('');
   const [markerDescription, setMarkerDescription] = useState('');
+  const [cameraType, setCameraType] = useState(Camera.Constants.Type['back']);
+
   const dismissKeyboard = () => {
     Keyboard.dismiss();
   };
-
 
   const cameraRef = useRef(null);
 
@@ -107,10 +107,11 @@ const App = () => {
   const renderMarkerCallout = (marker) => (
     <TouchableOpacity onPress={dismissKeyboard}>
       <Image source={{ uri: marker.imageUri }} style={styles.markerImage} />
-      <Text style={{ textAlign: 'center' , fontWeight:'bold', fontStyle:'italic', color:'#303F9F'}}>{marker.title}</Text>
+      <Text style={{ textAlign: 'center', fontWeight: 'bold', fontStyle: 'italic', color: '#303F9F' }}>
+        {marker.title}
+      </Text>
     </TouchableOpacity>
   );
-
 
   const handleMarkerPress = (marker) => {
     setMarkerImageUri(marker.imageUri);
@@ -118,6 +119,11 @@ const App = () => {
     setMarkerDescription(marker.description);
     setModalVisible(true);
   };
+
+  const handleBackToMap = () => {
+    setCameraVisible(false);
+  };
+
 
   const handleSaveMarker = () => {
     const updatedMarkers = markers.map((marker) => {
@@ -134,7 +140,14 @@ const App = () => {
     setMarkers(updatedMarkers);
     setModalVisible(false);
     dismissKeyboard();
+  };
 
+  const toggleCameraType = () => {
+    setCameraType((prevType) =>
+      prevType === Camera.Constants.Type['back']
+        ? Camera.Constants.Type['front']
+        : Camera.Constants.Type['back']
+    );
   };
 
   return (
@@ -175,26 +188,28 @@ const App = () => {
         <Camera
           ref={cameraRef}
           style={StyleSheet.absoluteFillObject}
-          type={Camera.Constants.Type['back']}
+          type={cameraType}
           onCameraReady={() => console.log('Câmera pronta')}
           onMountError={(error) => console.log('Erro ao montar a câmera:', error)}
         >
           <TouchableOpacity style={styles.captureButton} onPress={handleCaptureImage}>
-            <Text style={styles.captureButtonText}>Capturar</Text>
+            <Icon name="camera" size={30} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.toggleButton} onPress={toggleCameraType}>
+            <Icon name="flip-camera-ios" size={30} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.backButton} onPress={handleBackToMap}>
+            <Icon name="arrow-back" size={30} color="#FFFFFF" />
           </TouchableOpacity>
         </Camera>
       )}
-
 
       <Modal visible={isModalVisible} animationType="slide" transparent={true}>
         <TouchableOpacity activeOpacity={1} style={styles.modalContainer} onPress={dismissKeyboard}>
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               {markerImageUri && (
-                <Image
-                  source={{ uri: markerImageUri }}
-                  style={styles.modalImage}
-                />
+                <Image source={{ uri: markerImageUri }} style={styles.modalImage} />
               )}
               <TextInput
                 style={styles.input}
@@ -213,7 +228,6 @@ const App = () => {
             </View>
           </View>
         </TouchableOpacity>
-
       </Modal>
     </View>
   );
@@ -246,9 +260,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  camera: {
-    flex: 1,
-  },
   captureButton: {
     position: 'absolute',
     bottom: 30,
@@ -261,6 +272,29 @@ const styles = StyleSheet.create({
   captureButtonText: {
     color: '#FFFFFF',
   },
+  backButton: {
+    position: 'absolute',
+    top: 30,
+    left: 20,
+    backgroundColor: '#303F9F',
+    borderRadius: 20,
+    padding: 10,
+    elevation: 5,
+  },
+
+  toggleButton: {
+    position: 'absolute',
+    bottom: 30,
+    alignSelf: 'flex-end',
+    backgroundColor: '#303F9F',
+    borderRadius: 40,
+    padding: 15,
+    elevation: 5,
+    right: 10,
+  },
+  toggleButtonText: {
+    color: '#FFFFFF',
+  },
   markerImage: {
     width: 50,
     height: 50,
@@ -271,7 +305,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-
   },
   modalContent: {
     backgroundColor: '#FFFFFF',

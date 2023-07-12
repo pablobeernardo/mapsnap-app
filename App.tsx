@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,8 +8,8 @@ import {
   TextInput,
   Button,
   Image,
+  Alert,
 } from 'react-native';
-import React, { useState, useEffect, useRef } from 'react';
 import MapView, { Marker } from 'react-native-maps';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import * as Location from 'expo-location';
@@ -26,6 +27,21 @@ const App = () => {
   const [markerTitle, setMarkerTitle] = useState('');
   const [markerDescription, setMarkerDescription] = useState('');
   const [cameraType, setCameraType] = useState(Camera.Constants.Type['back']);
+
+  
+  const handleDeleteConfirmation = () => {
+    Alert.alert(
+      'Confirmação',
+      'Tem certeza de que deseja excluir?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => handleDeleteMarker(markerImageUri) },
+      ]
+    );
+  };
+
+
+  
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
@@ -124,6 +140,11 @@ const App = () => {
     setCameraVisible(false);
   };
 
+  const handleDeleteMarker = (imageUri) => {
+    const updatedMarkers = markers.filter((marker) => marker.imageUri !== imageUri);
+    setMarkers(updatedMarkers);
+    setModalVisible(false);
+  };
 
   const handleSaveMarker = () => {
     const updatedMarkers = markers.map((marker) => {
@@ -209,7 +230,9 @@ const App = () => {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               {markerImageUri && (
-                <Image source={{ uri: markerImageUri }} style={styles.modalImage} />
+                <>
+                  <Image source={{ uri: markerImageUri }} style={styles.modalImage} />
+                </>
               )}
               <TextInput
                 style={styles.input}
@@ -224,7 +247,10 @@ const App = () => {
                 onChangeText={setMarkerDescription}
                 multiline={true}
               />
-              <Button title="Salvar" onPress={handleSaveMarker} />
+              <View style={{flexDirection:'row' , justifyContent:'space-between'}}>
+                <Button title="Salvar" onPress={handleSaveMarker} />
+                <Button title="Deletar" onPress={handleDeleteConfirmation} />
+              </View>
             </View>
           </View>
         </TouchableOpacity>
@@ -269,9 +295,6 @@ const styles = StyleSheet.create({
     padding: 15,
     elevation: 5,
   },
-  captureButtonText: {
-    color: '#FFFFFF',
-  },
   backButton: {
     position: 'absolute',
     top: 30,
@@ -281,7 +304,6 @@ const styles = StyleSheet.create({
     padding: 10,
     elevation: 5,
   },
-
   toggleButton: {
     position: 'absolute',
     bottom: 30,
@@ -291,9 +313,6 @@ const styles = StyleSheet.create({
     padding: 15,
     elevation: 5,
     right: 10,
-  },
-  toggleButtonText: {
-    color: '#FFFFFF',
   },
   markerImage: {
     width: 50,

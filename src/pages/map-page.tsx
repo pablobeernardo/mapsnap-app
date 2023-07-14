@@ -1,103 +1,168 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Image } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import * as Location from 'expo-location';
+import { View, StyleSheet, Image, TouchableOpacity, Modal, TextInput, Button, Text, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import MapView, { Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
+import * as MediaLibrary from 'expo-media-library';
+import { MaterialIcons } from '@expo/vector-icons';
 
-const MapPage = ({ navigation, route }) => {
-  const { markerId, imageUri } = route.params || {};
-
+const MapPage = ({navigation, route}) => {
+  
+  const { capturedImage } = route.params;
   const [markers, setMarkers] = useState([]);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [markerImageUri, setMarkerImageUri] = useState(null);
+  const [markerTitle, setMarkerTitle] = useState('');
+  const [markerDescription, setMarkerDescription] = useState('');
 
   useEffect(() => {
     getLocationPermission();
   }, []);
 
-  // Função para obter permissão de localização
   const getLocationPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
-      console.log('Permissão de localização não concedida');
+      Alert.alert('Permissão de localização não concedida');
     } else {
       getCurrentLocation();
     }
   };
 
-  // Função para obter a localização atual do dispositivo
   const getCurrentLocation = async () => {
     const { coords } = await Location.getCurrentPositionAsync({});
     const { latitude, longitude } = coords;
     setCurrentLocation({ latitude, longitude });
   };
 
-  // Função para abrir a página da câmera
-  const openCameraPage = () => {
-    navigation.navigate('CamPage', { markerId });
+  const handleAddMarker = () => {
+    if (currentLocation && capturedImage) {
+      const newMarker = {
+        id: markers.length.toString(),
+        coordinate: currentLocation,
+        imageUri: capturedImage,
+        title: '',
+        description: '',
+      };
+      setMarkers([...markers, newMarker]);
+    }
   };
 
-  // Função para lidar com o pressionar de um marcador
+  const saveToGallery = async (photoUri) => {
+    try {
+      await MediaLibrary.saveToLibraryAsync(photoUri);
+      Alert.alert('Imagem salva na galeria');
+    } catch (error) {
+      Alert.alert('Erro ao salvar imagem na galeria:', error);
+    }
+  };
+
   const handleMarkerPress = (marker) => {
-    // Lógica para lidar com o pressionar do marcador
-    console.log('Marcador pressionado:', marker);
+    setMarkerImageUri(marker.imageUri);
+    setMarkerTitle(marker.title);
+    setMarkerDescription(marker.description);
+    setModalVisible(true);
   };
 
-  // Função para renderizar o conteúdo do balão de informações do marcador
-  const renderMarkerCallout = (marker) => (
-    <Callout onPress={() => handleMarkerPress(marker)}>
-      <View>
-        <Image source={{ uri: marker.imageUri }} style={styles.markerImage} />
-        <Text style={{ textAlign: 'center', fontWeight: 'bold', fontStyle: 'italic', color: '#303F9F' }}>
-          {marker.title}
-        </Text>
-      </View>
-    </Callout>
-  );
+  const handleSaveMarker = () => {
+    const updatedMarkers = markers.map((marker) => {
+      if (marker.imageUri === markerImageUri) {
+        return {
+          ...marker,
+          title: markerTitle,
+          description: markerDescription,
+        };
+      }
+      return marker;
+    });
+
+    setMarkers(updatedMarkers);
+    setModalVisible(false);
+    dismissKeyboard();
+  };
+
+  const handleDeleteMarker = (imageUri) => {
+    const updatedMarkers = markers.filter((marker) => marker.imageUri !== imageUri);
+    setMarkers(updatedMarkers);
+    setModalVisible(false);
+    dismissKeyboard();
+  };
+
+  const handleAddMarkerAndSaveToGallery = async () => {
+    if (currentLocation && capturedImage) {
+      await saveToGallery(capturedImage);
+      handleAddMarker();
+    }
+  };
 
   useEffect(() => {
-    if (markerId && imageUri && markers.length > 0) {
-      const updatedMarkers = markers.map((marker) => {
-        if (marker.id === markerId) {
-          return { ...marker, imageUri };
-        }
-        return marker;
-      });
-      setMarkers(updatedMarkers);
-    }
-  }, [markerId, imageUri, markers]);
+    handleAddMarkerAndSaveToGallery();
+  }, [currentLocation, capturedImage]);
+
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
 
   return (
-    <View style={styles.container}>
-      {currentLocation ? (
-        <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: currentLocation.latitude,
-            longitude: currentLocation.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
-          }}
-        >
-          {markers.map((marker) => (
-            <Marker
-              key={marker.id}
-              coordinate={marker.coordinate}
-            >
-              {renderMarkerCallout(marker)}
-            </Marker>
-          ))}
-        </MapView>
-      ) : (
-        <Text style={styles.loadingText}>Carregando mapa...</Text>
-      )}
+    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+      <View style={styles.container}>
+        {currentLocation ? (
+          <MapView
+            style={styles.map}
+            initialRegion={{
+              latitude: currentLocation.latitude,
+              longitude: currentLocation.longitude,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            }}
+          >
+            {markers.map((marker) => (
+              <Marker
+                key={marker.id}
+                coordinate={marker.coordinate}
+                onPress={() => handleMarkerPress(marker)}
+              >
+                <Image source={{ uri: marker.imageUri }} style={styles.markerImage} />
+              </Marker>
+            ))}
+          </MapView>
+        ) : (
+          <Text style={styles.loadingText}>Carregando mapa...</Text>
+        )}
 
-      <TouchableOpacity style={styles.buttonContainer} onPress={openCameraPage}>
-        <View style={styles.iconContainer}>
-          <Icon name="camera" size={30} color="#FFFFFF" />
-        </View>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity style={styles.buttonContainer} onPress={() => navigation.navigate('CamPage')}>
+          <MaterialIcons name="camera" size={30} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        <Modal visible={isModalVisible} animationType="slide" transparent={true}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              {markerImageUri && (
+                <Image source={{ uri: markerImageUri }} style={styles.modalImage} />
+              )}
+              <TextInput
+                style={styles.input}
+                placeholder="Título"
+                value={markerTitle}
+                onChangeText={setMarkerTitle}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Descrição"
+                value={markerDescription}
+                onChangeText={setMarkerDescription}
+                multiline={true}
+                onBlur={dismissKeyboard} // Fechar o teclado quando o campo perder o foco
+              />
+              <View style={styles.modalButtonContainer}>
+                <Button title="Salvar" onPress={handleSaveMarker} />
+                <Button title="Deletar" onPress={() => handleDeleteMarker(markerImageUri)} />
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -128,11 +193,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
   markerImage: {
     width: 50,
     height: 50,
     borderRadius: 25,
     resizeMode: 'cover',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+  },
+  modalImage: {
+    width: 250,
+    height: 250,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignSelf: 'center',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 });
 

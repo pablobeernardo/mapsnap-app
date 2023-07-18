@@ -1,12 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { Camera } from 'expo-camera';
-import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
 
-const CamPage = ({navigation}) => {
-  const [capturedImage, setCapturedImage] = useState(null);
-  const [cameraType, setCameraType] = useState(Camera.Constants.Type['back']);
-  const cameraRef = useRef(null);
+const CamPage = ({ navigation }: any) => {
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [cameraType, setCameraType] = useState<number>(Camera.Constants.Type['back']);
+  const cameraRef = useRef<Camera | null>(null);
 
   const handleCaptureImage = async () => {
     if (cameraRef.current) {
@@ -28,10 +28,10 @@ const CamPage = ({navigation}) => {
     <View style={styles.container}>
       <Camera ref={cameraRef} style={styles.camera} type={cameraType} />
       <TouchableOpacity style={styles.captureButton} onPress={handleCaptureImage}>
-        <Text style={styles.captureButtonText}>Capture</Text>
+        <MaterialIcons name="camera" size={30} color="#FFFFFF" />
       </TouchableOpacity>
       <TouchableOpacity style={styles.toggleButton} onPress={toggleCameraType}>
-        <Text style={styles.toggleButtonText}>Toggle</Text>
+        <MaterialIcons name="flip-camera-android" size={30} color="#FFFFFF" />
       </TouchableOpacity>
     </View>
   );
@@ -53,10 +53,6 @@ const styles = StyleSheet.create({
     padding: 15,
     elevation: 5,
   },
-  captureButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
   toggleButton: {
     position: 'absolute',
     bottom: 30,
@@ -66,10 +62,6 @@ const styles = StyleSheet.create({
     padding: 15,
     elevation: 5,
     right: 10,
-  },
-  toggleButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
   },
 });
 

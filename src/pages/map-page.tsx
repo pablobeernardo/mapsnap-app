@@ -1,20 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Image, TouchableOpacity, Modal, TextInput, Button, Text, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import {
+  View,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  Text,
+  Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import * as MediaLibrary from 'expo-media-library';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as Animatable from 'react-native-animatable';
+import { MarkerEntity } from '../entities/marker-entity';
 
-const MapPage = ({navigation, route}) => {
-  
+const MapPage = ({ navigation, route }: any) => {
   const { capturedImage } = route.params;
-  const [markers, setMarkers] = useState([]);
-  const [currentLocation, setCurrentLocation] = useState(null);
+  const [markers, setMarkers] = useState<MarkerEntity[]>([]);
+  const [currentLocation, setCurrentLocation] = useState<any>(null);
   const [isModalVisible, setModalVisible] = useState(false);
-  const [markerImageUri, setMarkerImageUri] = useState(null);
+  const [markerImageUri, setMarkerImageUri] = useState<string | null>(null);
   const [markerTitle, setMarkerTitle] = useState('');
   const [markerDescription, setMarkerDescription] = useState('');
+  const [isEditing, setEditing] = useState(false);
 
   useEffect(() => {
     getLocationPermission();
@@ -37,9 +51,10 @@ const MapPage = ({navigation, route}) => {
 
   const handleAddMarker = () => {
     if (currentLocation && capturedImage) {
-      const newMarker = {
-        id: markers.length.toString(),
-        coordinate: currentLocation,
+      const newMarker: MarkerEntity = {
+        id: '',
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
         imageUri: capturedImage,
         title: '',
         description: '',
@@ -48,20 +63,24 @@ const MapPage = ({navigation, route}) => {
     }
   };
 
-  const saveToGallery = async (photoUri) => {
+  const saveToGallery = async (photoUri: string) => {
     try {
       await MediaLibrary.saveToLibraryAsync(photoUri);
-      Alert.alert('Imagem salva na galeria');
     } catch (error) {
       Alert.alert('Erro ao salvar imagem na galeria:', error);
     }
   };
 
-  const handleMarkerPress = (marker) => {
+  const handleMarkerPress = (marker: MarkerEntity) => {
     setMarkerImageUri(marker.imageUri);
     setMarkerTitle(marker.title);
     setMarkerDescription(marker.description);
     setModalVisible(true);
+    setEditing(false);
+  };
+
+  const handleEdit = () => {
+    setEditing(true);
   };
 
   const handleSaveMarker = () => {
@@ -81,7 +100,7 @@ const MapPage = ({navigation, route}) => {
     dismissKeyboard();
   };
 
-  const handleDeleteMarker = (imageUri) => {
+  const handleDeleteMarker = (imageUri: string) => {
     const updatedMarkers = markers.filter((marker) => marker.imageUri !== imageUri);
     setMarkers(updatedMarkers);
     setModalVisible(false);
@@ -116,13 +135,15 @@ const MapPage = ({navigation, route}) => {
               longitudeDelta: 0.0421,
             }}
           >
-            {markers.map((marker) => (
+            {markers.map((marker, index) => ( // Adicionamos o "index" como chave única
               <Marker
-                key={marker.id}
-                coordinate={marker.coordinate}
+                key={index.toString()} // Usamos o "index" como chave para cada marcador
+                coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
                 onPress={() => handleMarkerPress(marker)}
               >
-                <Image source={{ uri: marker.imageUri }} style={styles.markerImage} />
+                <View style={styles.markerContainer}>
+                  <Image source={{ uri: marker.imageUri }} style={styles.markerImage} />
+                </View>
               </Marker>
             ))}
           </MapView>
@@ -130,36 +151,85 @@ const MapPage = ({navigation, route}) => {
           <Text style={styles.loadingText}>Carregando mapa...</Text>
         )}
 
-        <TouchableOpacity style={styles.buttonContainer} onPress={() => navigation.navigate('CamPage')}>
+        <TouchableOpacity style={styles.cameraButton} onPress={() => navigation.navigate('CamPage')}>
           <MaterialIcons name="camera" size={30} color="#FFFFFF" />
         </TouchableOpacity>
 
         <Modal visible={isModalVisible} animationType="slide" transparent={true}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              {markerImageUri && (
-                <Image source={{ uri: markerImageUri }} style={styles.modalImage} />
-              )}
-              <TextInput
-                style={styles.input}
-                placeholder="Título"
-                value={markerTitle}
-                onChangeText={setMarkerTitle}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Descrição"
-                value={markerDescription}
-                onChangeText={setMarkerDescription}
-                multiline={true}
-                onBlur={dismissKeyboard} // Fechar o teclado quando o campo perder o foco
-              />
-              <View style={styles.modalButtonContainer}>
-                <Button title="Salvar" onPress={handleSaveMarker} />
-                <Button title="Deletar" onPress={() => handleDeleteMarker(markerImageUri)} />
-              </View>
-            </View>
-          </View>
+          <TouchableWithoutFeedback onPress={dismissKeyboard}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={styles.modalContainer}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+            >
+              <Animatable.View
+                style={styles.modalContent}
+                animation="fadeInUp"
+                duration={500}
+                useNativeDriver
+              >
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+                    <MaterialIcons name="close" size={24} color="black" />
+                  </TouchableOpacity>
+                </View>
+                {markerImageUri && (
+                  <Image source={{ uri: markerImageUri }} style={styles.modalImage} />
+                )}
+                {isEditing ? (
+                  <>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Título"
+                      value={markerTitle}
+                      onChangeText={setMarkerTitle}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Descrição"
+                      value={markerDescription}
+                      onChangeText={setMarkerDescription}
+                      multiline={true}
+                      onBlur={dismissKeyboard}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.modalTitle}>{markerTitle}</Text>
+                    <Text style={styles.modalDescription}>{markerDescription}</Text>
+                  </>
+                )}
+                <View style={styles.modalButtonContainer}>
+                  {!isEditing && (
+                    <Animatable.View animation="fadeIn" duration={500} delay={200}>
+                      <TouchableOpacity
+                        style={[styles.editButton, { backgroundColor: '#1976D2' }]}
+                        onPress={handleEdit}
+                      >
+                        <Text style={styles.buttonText}>Editar</Text>
+                      </TouchableOpacity>
+                    </Animatable.View>
+                  )}
+                  <Animatable.View animation="fadeIn" duration={500} delay={200}>
+                    <TouchableOpacity
+                      style={[styles.saveButton, { backgroundColor: '#303F9F' }]}
+                      onPress={handleSaveMarker}
+                    >
+                      <Text style={styles.buttonText}>Salvar</Text>
+                    </TouchableOpacity>
+                  </Animatable.View>
+                  <Animatable.View animation="fadeIn" duration={500} delay={300}>
+                    <TouchableOpacity
+                      style={[styles.deleteButton, { backgroundColor: '#FF0000' }]}
+                      onPress={() => handleDeleteMarker(markerImageUri as string)}
+                    >
+                      <Text style={styles.buttonText}>Deletar</Text>
+                    </TouchableOpacity>
+                  </Animatable.View>
+                </View>
+              </Animatable.View>
+            </KeyboardAvoidingView>
+          </TouchableWithoutFeedback>
         </Modal>
       </View>
     </TouchableWithoutFeedback>
@@ -180,7 +250,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 320,
   },
-  buttonContainer: {
+  cameraButton: {
     position: 'absolute',
     bottom: 40,
     right: 30,
@@ -189,13 +259,14 @@ const styles = StyleSheet.create({
     padding: 15,
     elevation: 5,
   },
-  iconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  markerContainer: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    overflow: 'hidden',
+    elevation: 5,
   },
   markerImage: {
     width: 50,
@@ -209,10 +280,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 10,
     padding: 20,
     width: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end', // Alinhar o botão "X" no canto superior direito
+  },
+  closeButton: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 5,
+    elevation: 5,
   },
   modalImage: {
     width: 250,
@@ -220,6 +301,23 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 10,
     alignSelf: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 5,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    fontSize: 16,
+    marginBottom: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+    textAlign: 'center',
   },
   input: {
     borderWidth: 1,
@@ -231,6 +329,27 @@ const styles = StyleSheet.create({
   modalButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  editButton: {
+    backgroundColor: '#303F9F',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  saveButton: {
+    backgroundColor: '#303F9F',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  deleteButton: {
+    backgroundColor: '#303F9F',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#FFFFFF',
   },
 });
 

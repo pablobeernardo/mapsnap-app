@@ -33,7 +33,9 @@ const MapPage = ({ navigation, route }: any) => {
   const [markerDescription, setMarkerDescription] = useState('');
   const [isEditing, setEditing] = useState(false);
   const [photoDate, setPhotoDate] = useState<string>('');
-  
+  const [markerTitle, setMarkerTitle] = useState('');
+
+
 
 
   useEffect(() => {
@@ -67,6 +69,7 @@ const MapPage = ({ navigation, route }: any) => {
         imagePath: capturedImage,
         description: '',
         photoDate: formattedDate,
+        title: ''
       };
       setMarkers([...markers, newMarker]);
     }
@@ -82,8 +85,9 @@ const MapPage = ({ navigation, route }: any) => {
 
   const handleMarkerPress = (marker: MarkerEntity) => {
     setMarkerImageUri(marker.imagePath);
+    setMarkerTitle(marker.title);
     setMarkerDescription(marker.description);
-    setPhotoDate(marker.photoDate); 
+    setPhotoDate(marker.photoDate);
     setModalVisible(true);
     setEditing(false);
   };
@@ -97,6 +101,7 @@ const MapPage = ({ navigation, route }: any) => {
       if (marker.imagePath === markerImageUri) {
         return {
           ...marker,
+          title: markerTitle,
           description: markerDescription,
         };
       }
@@ -122,12 +127,24 @@ const MapPage = ({ navigation, route }: any) => {
     }
   };
 
-  async function getPlaces(){
+  async function getPlaces() {
     return onValue(ref(db, '/places'), (snapshot) => {
-      console.log('Dados do Real Time', snapshot)
+      try {
+        setMarkers([]);
+        if (snapshot !== undefined) {
+          snapshot.forEach((childSnapshot) => {
 
-      
-    })
+            const childkey = childSnapshot.key;
+            let childValue = childSnapshot.val();
+            childValue.id = childkey;
+            setMarkers((places) => [...places, (childValue as MarkerEntity)])
+          });
+        }
+      } catch (e) {
+        console.log(e);
+      }
+
+    });
   }
 
   useEffect(() => {
@@ -153,9 +170,9 @@ const MapPage = ({ navigation, route }: any) => {
               longitudeDelta: 0.0421,
             }}
           >
-            {markers.map((marker, index) => ( 
+            {markers.map((marker, index) => (
               <Marker
-                key={index.toString()} 
+                key={index.toString()}
                 coordinate={marker.coords}
                 onPress={() => handleMarkerPress(marker)}
               >
@@ -199,7 +216,12 @@ const MapPage = ({ navigation, route }: any) => {
 
                 {isEditing ? (
                   <>
-                    
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Título"
+                      value={markerTitle}
+                      onChangeText={setMarkerTitle}
+                    />
                     <TextInput
                       style={styles.input}
                       placeholder="Descrição"
@@ -211,6 +233,7 @@ const MapPage = ({ navigation, route }: any) => {
                   </>
                 ) : (
                   <>
+                    <Text style={styles.modalTitle}>{markerTitle}</Text>
                     <Text style={styles.modalDescription}>{markerDescription}</Text>
                   </>
                 )}
@@ -302,7 +325,7 @@ const styles = StyleSheet.create({
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'flex-end', 
+    justifyContent: 'flex-end',
   },
   closeButton: {
     backgroundColor: 'white',
@@ -323,7 +346,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 1,
     textAlign: 'center',
   },
   modalDescription: {
@@ -367,15 +390,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   dateStyle: {
-    fontSize: 12, 
+    fontSize: 12,
     fontStyle: 'italic',
-    color: 'rgba(0, 0, 0, 0.7)', 
-    alignSelf: 'flex-end', 
+    color: 'rgba(0, 0, 0, 0.7)',
+    alignSelf: 'flex-end',
     marginBottom: 8,
     marginRight: 5
-    
+
   },
-  
+
 });
 
 export default MapPage;

@@ -4,4 +4,5 @@ export interface MarkerEntity {
   coords: {latitude: number, longitude: number};
   description: string;
   photoDate: string;
+  title: string;
 }

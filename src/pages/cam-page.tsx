@@ -1,12 +1,14 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Image } from 'react-native';
 import { Camera } from 'expo-camera';
 import { MaterialIcons } from '@expo/vector-icons';
+
 
 const CamPage = ({ navigation }: any) => {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [cameraType, setCameraType] = useState<number>(Camera.Constants.Type['back']);
   const cameraRef = useRef<Camera | null>(null);
+
 
   const handleCaptureImage = async () => {
     if (cameraRef.current) {
@@ -16,6 +18,7 @@ const CamPage = ({ navigation }: any) => {
     }
   };
 
+
   const toggleCameraType = () => {
     setCameraType((prevType) =>
       prevType === Camera.Constants.Type['back']
@@ -23,6 +26,7 @@ const CamPage = ({ navigation }: any) => {
         : Camera.Constants.Type['back']
     );
   };
+
 
   return (
     <View style={styles.container}>

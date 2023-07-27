@@ -20,8 +20,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
 import { MarkerEntity } from '../entities/marker-entity';
 import { format } from 'date-fns';
-import { onValue, ref } from 'firebase/database';
-import { db } from '../../firebase-config';
+import { onValue, push, ref } from 'firebase/database';
+import { app, db } from '../../firebase-config';
+import * as firebaseStorage from '@firebase/storage'
+import { Camera } from 'expo-camera';
 
 
 const MapPage = ({ navigation, route }: any) => {
@@ -34,13 +36,30 @@ const MapPage = ({ navigation, route }: any) => {
   const [isEditing, setEditing] = useState(false);
   const [photoDate, setPhotoDate] = useState<string>('');
   const [markerTitle, setMarkerTitle] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
-
-
+  
 
   useEffect(() => {
     getLocationPermission();
+    getCameraPermission();
+    getMediaLibraryPermission();
+
   }, []);
+
+  const getCameraPermission = async () => {
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão de câmera não concedida');
+    }
+  };
+
+  const getMediaLibraryPermission = async () => {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão de biblioteca de mídia não concedida');
+    }
+  };
 
   const getLocationPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -57,7 +76,7 @@ const MapPage = ({ navigation, route }: any) => {
     setCurrentLocation({ latitude, longitude });
   };
 
-  const handleAddMarker = () => {
+  const handleAddMarker = async () => {
     if (currentLocation && capturedImage) {
       const currentDate = new Date();
       const formattedDate = format(currentDate, 'dd/MM/yyyy HH:mm:ss');
@@ -66,14 +85,17 @@ const MapPage = ({ navigation, route }: any) => {
       const newMarker: MarkerEntity = {
         id: '',
         coords: { latitude: currentLocation.latitude, longitude: currentLocation.longitude },
-        imagePath: capturedImage,
+        imagePath: await uploadImage(capturedImage),
         description: '',
         photoDate: formattedDate,
         title: ''
       };
       setMarkers([...markers, newMarker]);
+      push(ref(db, 'places'), newMarker);
     }
   };
+
+  
 
   const saveToGallery = async (photoUri: string) => {
     try {
@@ -157,9 +179,37 @@ const MapPage = ({ navigation, route }: any) => {
     Keyboard.dismiss();
   };
 
+  async function uploadImage(imageUrl): Promise<string> {
+    setIsUploading(true);
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+
+    const storage = firebaseStorage.getStorage(app);
+    const storageRef = firebaseStorage.ref(
+      storage,
+      'images/' + imageUrl.replace(/^.*[\\\/]/, '')
+    );
+
+    await firebaseStorage.uploadBytes(storageRef, blob);
+
+    const uploadedImageUrl = await firebaseStorage.getDownloadURL(storageRef);
+    console.log(uploadedImageUrl);
+    setIsUploading(false);
+    return uploadedImageUrl;
+    
+
+  }
+
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard}>
       <View style={styles.container}>
+      {isUploading ?
+        <View style={{ width: '100%', height: '100%', backgroundColor: 'black', opacity: 0.8, justifyContent: 'center', alignItems: 'center' }}>
+          <Image style={{ width: 100, height: 80 }} source={{ uri: 'https://i.gifer.com/ZWdx.gif' }} />
+          <Text style={{ color: 'white' }}>Aguarde...</Text>
+        </View> : <></>
+      }
+
         {currentLocation ? (
           <MapView
             style={styles.map}

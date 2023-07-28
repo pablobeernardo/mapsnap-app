@@ -20,8 +20,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
 import { MarkerEntity } from '../entities/marker-entity';
 import { format } from 'date-fns';
-import { onValue, push, ref } from 'firebase/database';
-import { app, db } from '../../firebase-config';
+import { onValue, push, ref, update } from 'firebase/database';
+import { app, db } from '../../firebase-config'
 import * as firebaseStorage from '@firebase/storage'
 import { Camera } from 'expo-camera';
 
@@ -31,14 +31,15 @@ const MapPage = ({ navigation, route }: any) => {
   const [markers, setMarkers] = useState<MarkerEntity[]>([]);
   const [currentLocation, setCurrentLocation] = useState<any>(null);
   const [isModalVisible, setModalVisible] = useState(false);
-  const [markerImageUri, setMarkerImageUri] = useState<string | null>(null);
-  const [markerDescription, setMarkerDescription] = useState('');
   const [isEditing, setEditing] = useState(false);
   const [photoDate, setPhotoDate] = useState<string>('');
-  const [markerTitle, setMarkerTitle] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [markerPress, setMarkerPress] = useState<MarkerEntity>();
+  const [markerTitle, setMarkerTitle] = useState('');
+  const [markerDescription, setMarkerDescription] = useState('');
 
-  
+
+
 
   useEffect(() => {
     getLocationPermission();
@@ -46,6 +47,17 @@ const MapPage = ({ navigation, route }: any) => {
     getMediaLibraryPermission();
 
   }, []);
+
+
+  async function updateItem() {
+    markerPress.description = markerDescription;
+    markerPress.title = markerTitle;
+    update(ref(db, '/places/' + markerPress.id), markerPress);
+    setModalVisible(false);
+    setMarkerDescription('');
+    setMarkerTitle('');
+  }
+
 
   const getCameraPermission = async () => {
     const { status } = await Camera.requestCameraPermissionsAsync();
@@ -95,7 +107,7 @@ const MapPage = ({ navigation, route }: any) => {
     }
   };
 
-  
+
 
   const saveToGallery = async (photoUri: string) => {
     try {
@@ -106,34 +118,16 @@ const MapPage = ({ navigation, route }: any) => {
   };
 
   const handleMarkerPress = (marker: MarkerEntity) => {
-    setMarkerImageUri(marker.imagePath);
-    setMarkerTitle(marker.title);
-    setMarkerDescription(marker.description);
-    setPhotoDate(marker.photoDate);
     setModalVisible(true);
+    setMarkerPress(marker);
     setEditing(false);
+
   };
 
   const handleEdit = () => {
     setEditing(true);
   };
 
-  const handleSaveMarker = () => {
-    const updatedMarkers = markers.map((marker) => {
-      if (marker.imagePath === markerImageUri) {
-        return {
-          ...marker,
-          title: markerTitle,
-          description: markerDescription,
-        };
-      }
-      return marker;
-    });
-
-    setMarkers(updatedMarkers);
-    setModalVisible(false);
-    dismissKeyboard();
-  };
 
   const handleDeleteMarker = (imageUri: string | null) => {
     const updatedMarkers = markers.filter((marker) => marker.imagePath !== imageUri);
@@ -170,9 +164,8 @@ const MapPage = ({ navigation, route }: any) => {
   }
 
   useEffect(() => {
-
     getPlaces()
-    handleAddMarkerAndSaveToGallery();
+    //handleAddMarkerAndSaveToGallery();
   }, [currentLocation, capturedImage]);
 
   const dismissKeyboard = () => {
@@ -196,19 +189,20 @@ const MapPage = ({ navigation, route }: any) => {
     console.log(uploadedImageUrl);
     setIsUploading(false);
     return uploadedImageUrl;
-    
+
 
   }
+
 
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard}>
       <View style={styles.container}>
-      {isUploading ?
-        <View style={{ width: '100%', height: '100%', backgroundColor: 'black', opacity: 0.8, justifyContent: 'center', alignItems: 'center' }}>
-          <Image style={{ width: 100, height: 80 }} source={{ uri: 'https://i.gifer.com/ZWdx.gif' }} />
-          <Text style={{ color: 'white' }}>Aguarde...</Text>
-        </View> : <></>
-      }
+        {isUploading ?
+          <View style={{ width: '100%', height: '100%', backgroundColor: 'black', opacity: 0.8, justifyContent: 'center', alignItems: 'center' }}>
+            <Image style={{ width: 100, height: 80 }} source={{ uri: 'https://i.gifer.com/ZWdx.gif' }} />
+            <Text style={{ color: 'white' }}>Aguarde...</Text>
+          </View> : <></>
+        }
 
         {currentLocation ? (
           <MapView
@@ -220,9 +214,9 @@ const MapPage = ({ navigation, route }: any) => {
               longitudeDelta: 0.0421,
             }}
           >
-            {markers.map((marker, index) => (
+            {markers.map((marker) => (
               <Marker
-                key={index.toString()}
+                key={Math.random().toString()}
                 coordinate={marker.coords}
                 onPress={() => handleMarkerPress(marker)}
               >
@@ -240,85 +234,90 @@ const MapPage = ({ navigation, route }: any) => {
           <MaterialIcons name="camera" size={30} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <Modal visible={isModalVisible} animationType="slide" transparent={true}>
-          <TouchableWithoutFeedback onPress={dismissKeyboard}>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-              style={styles.modalContainer}
-              keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
-            >
-              <Animatable.View
-                style={styles.modalContent}
-                animation="fadeInUp"
-                duration={500}
-                useNativeDriver
-              >
-                <View style={styles.modalHeader}>
-                  <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
-                    <MaterialIcons name="close" size={24} color="black" />
-                  </TouchableOpacity>
-                </View>
-                {markerImageUri && (
-                  <Image source={{ uri: markerImageUri }} style={styles.modalImage} />
-                )}
-                <Text style={styles.dateStyle}>{photoDate}</Text>
+        {
+          isModalVisible ?
 
-
-                {isEditing ? (
-                  <>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Título"
-                      value={markerTitle}
-                      onChangeText={setMarkerTitle}
-                    />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Descrição"
-                      value={markerDescription}
-                      onChangeText={setMarkerDescription}
-                      multiline={true}
-                      onBlur={dismissKeyboard}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.modalTitle}>{markerTitle}</Text>
-                    <Text style={styles.modalDescription}>{markerDescription}</Text>
-                  </>
-                )}
-                <View style={styles.modalButtonContainer}>
-                  {!isEditing && (
-                    <Animatable.View animation="fadeIn" duration={500} delay={200}>
-                      <TouchableOpacity
-                        style={[styles.editButton, { backgroundColor: '#1976D2' }]}
-                        onPress={handleEdit}
-                      >
-                        <Text style={styles.buttonText}>Editar</Text>
+            <Modal visible={isModalVisible} animationType="slide" transparent={true}>
+              <TouchableWithoutFeedback onPress={dismissKeyboard}>
+                <KeyboardAvoidingView
+                  behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                  style={styles.modalContainer}
+                  keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+                >
+                  <Animatable.View
+                    style={styles.modalContent}
+                    animation="fadeInUp"
+                    duration={500}
+                    useNativeDriver
+                  >
+                    <View style={styles.modalHeader}>
+                      <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+                        <MaterialIcons name="close" size={24} color="black" />
                       </TouchableOpacity>
-                    </Animatable.View>
-                  )}
-                  <Animatable.View animation="fadeIn" duration={500} delay={200}>
-                    <TouchableOpacity
-                      style={[styles.saveButton, { backgroundColor: '#303F9F' }]}
-                      onPress={handleSaveMarker}
-                    >
-                      <Text style={styles.buttonText}>Salvar</Text>
-                    </TouchableOpacity>
+                    </View>
+                    {markerPress && (
+                      <Image source={{ uri: markerPress.imagePath }} style={styles.modalImage} />
+                    )}
+                    <Text style={styles.dateStyle}>{photoDate}</Text>
+
+
+                    {isEditing ? (
+                      <>
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Título"
+                          value={markerTitle}
+                          onChangeText={setMarkerTitle}
+                        />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Descrição"
+                          value={markerDescription}
+                          onChangeText={setMarkerDescription}
+                          multiline={true}
+                          onBlur={dismissKeyboard}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.modalTitle}>{markerPress.title}</Text>
+                        <Text style={styles.modalDescription}>{markerPress.description}</Text>
+                      </>
+                    )}
+                    <View style={styles.modalButtonContainer}>
+                      {!isEditing && (
+                        <Animatable.View animation="fadeIn" duration={500} delay={200}>
+                          <TouchableOpacity
+                            style={[styles.editButton, { backgroundColor: '#1976D2' }]}
+                            onPress={handleEdit}
+                          >
+                            <Text style={styles.buttonText}>Editar</Text>
+                          </TouchableOpacity>
+                        </Animatable.View>
+                      )}
+                      <Animatable.View animation="fadeIn" duration={500} delay={200}>
+                        <TouchableOpacity
+                          style={[styles.saveButton, { backgroundColor: '#303F9F' }]}
+                          onPress={updateItem}
+                        >
+                          <Text style={styles.buttonText}>Salvar</Text>
+                        </TouchableOpacity>
+                      </Animatable.View>
+                      <Animatable.View animation="fadeIn" duration={500} delay={300}>
+                        <TouchableOpacity
+                          style={[styles.deleteButton, { backgroundColor: '#FF0000' }]}
+                          onPress={() => handleDeleteMarker(markerPress.imagePath as string)}
+                        >
+                          <Text style={styles.buttonText}>Deletar</Text>
+                        </TouchableOpacity>
+                      </Animatable.View>
+                    </View>
                   </Animatable.View>
-                  <Animatable.View animation="fadeIn" duration={500} delay={300}>
-                    <TouchableOpacity
-                      style={[styles.deleteButton, { backgroundColor: '#FF0000' }]}
-                      onPress={() => handleDeleteMarker(markerImageUri as string)}
-                    >
-                      <Text style={styles.buttonText}>Deletar</Text>
-                    </TouchableOpacity>
-                  </Animatable.View>
-                </View>
-              </Animatable.View>
-            </KeyboardAvoidingView>
-          </TouchableWithoutFeedback>
-        </Modal>
+                </KeyboardAvoidingView>
+              </TouchableWithoutFeedback>
+            </Modal> :
+            <></>
+        }
       </View>
     </TouchableWithoutFeedback>
   );

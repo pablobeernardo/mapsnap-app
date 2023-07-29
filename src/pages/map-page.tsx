@@ -12,6 +12,7 @@ import {
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
+  TouchableNativeFeedback,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -20,7 +21,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
 import { MarkerEntity } from '../entities/marker-entity';
 import { format } from 'date-fns';
-import { onValue, push, ref, update } from 'firebase/database';
+import { onValue, push, ref, remove, update } from 'firebase/database';
 import { app, db } from '../../firebase-config'
 import * as firebaseStorage from '@firebase/storage'
 import { Camera } from 'expo-camera';
@@ -39,16 +40,15 @@ const MapPage = ({ navigation, route }: any) => {
   const [markerDescription, setMarkerDescription] = useState('');
 
 
-
-
   useEffect(() => {
     getLocationPermission();
     getCameraPermission();
     getMediaLibraryPermission();
+    getPlaces();
+    handleAddMarkerAndSaveToGallery()   
+  }, [currentLocation, capturedImage]);
 
-  }, []);
-
-
+   
   async function updateItem() {
     markerPress.description = markerDescription;
     markerPress.title = markerTitle;
@@ -56,8 +56,30 @@ const MapPage = ({ navigation, route }: any) => {
     setModalVisible(false);
     setMarkerDescription('');
     setMarkerTitle('');
+  };
+
+  async function removeItem() {
+    setModalVisible(false);
+    setMarkerPress(null);
+    remove(ref(db, '/places/' + markerPress.id));
+  
   }
 
+  function showModalConfirmDialog(){
+    return Alert.alert(
+      "Deseja remover o item?",
+      "Essa ação não poderá ser desfeita.",
+      [
+        {
+          text: "Sim",
+          onPress: () => removeItem()
+        },
+        {
+          text: "Não",
+        }
+      ]
+    )
+  };
 
   const getCameraPermission = async () => {
     const { status } = await Camera.requestCameraPermissionsAsync();
@@ -107,6 +129,13 @@ const MapPage = ({ navigation, route }: any) => {
     }
   };
 
+  const handleAddMarkerAndSaveToGallery = async () => {
+    if (currentLocation && capturedImage) {
+      await saveToGallery(capturedImage);
+      handleAddMarker();
+    }
+  };
+
 
 
   const saveToGallery = async (photoUri: string) => {
@@ -129,19 +158,6 @@ const MapPage = ({ navigation, route }: any) => {
   };
 
 
-  const handleDeleteMarker = (imageUri: string | null) => {
-    const updatedMarkers = markers.filter((marker) => marker.imagePath !== imageUri);
-    setMarkers(updatedMarkers);
-    setModalVisible(false);
-    dismissKeyboard();
-  };
-
-  const handleAddMarkerAndSaveToGallery = async () => {
-    if (currentLocation && capturedImage) {
-      await saveToGallery(capturedImage);
-      handleAddMarker();
-    }
-  };
 
   async function getPlaces() {
     return onValue(ref(db, '/places'), (snapshot) => {
@@ -162,11 +178,6 @@ const MapPage = ({ navigation, route }: any) => {
 
     });
   }
-
-  useEffect(() => {
-    getPlaces()
-    //handleAddMarkerAndSaveToGallery();
-  }, [currentLocation, capturedImage]);
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
@@ -256,7 +267,9 @@ const MapPage = ({ navigation, route }: any) => {
                       </TouchableOpacity>
                     </View>
                     {markerPress && (
+                       <TouchableNativeFeedback onPress={() => {navigation.navigate('Marker', {marker: markerPress})}}>
                       <Image source={{ uri: markerPress.imagePath }} style={styles.modalImage} />
+                      </TouchableNativeFeedback>
                     )}
                     <Text style={styles.dateStyle}>{photoDate}</Text>
 
@@ -306,7 +319,7 @@ const MapPage = ({ navigation, route }: any) => {
                       <Animatable.View animation="fadeIn" duration={500} delay={300}>
                         <TouchableOpacity
                           style={[styles.deleteButton, { backgroundColor: '#FF0000' }]}
-                          onPress={() => handleDeleteMarker(markerPress.imagePath as string)}
+                          onPress={showModalConfirmDialog}
                         >
                           <Text style={styles.buttonText}>Deletar</Text>
                         </TouchableOpacity>

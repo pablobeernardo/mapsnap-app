@@ -40,15 +40,16 @@ const MapPage = ({ navigation, route }: any) => {
   const [markerDescription, setMarkerDescription] = useState('');
 
 
+
+
   useEffect(() => {
     getLocationPermission();
     getCameraPermission();
     getMediaLibraryPermission();
-    getPlaces();
-    handleAddMarkerAndSaveToGallery()   
-  }, [currentLocation, capturedImage]);
 
-   
+  }, []);
+
+
   async function updateItem() {
     markerPress.description = markerDescription;
     markerPress.title = markerTitle;
@@ -62,10 +63,10 @@ const MapPage = ({ navigation, route }: any) => {
     setModalVisible(false);
     setMarkerPress(null);
     remove(ref(db, '/places/' + markerPress.id));
-  
+
   }
 
-  function showModalConfirmDialog(){
+  function showModalConfirmDialog() {
     return Alert.alert(
       "Deseja remover o item?",
       "Essa ação não poderá ser desfeita.",
@@ -80,6 +81,7 @@ const MapPage = ({ navigation, route }: any) => {
       ]
     )
   };
+
 
   const getCameraPermission = async () => {
     const { status } = await Camera.requestCameraPermissionsAsync();
@@ -129,13 +131,6 @@ const MapPage = ({ navigation, route }: any) => {
     }
   };
 
-  const handleAddMarkerAndSaveToGallery = async () => {
-    if (currentLocation && capturedImage) {
-      await saveToGallery(capturedImage);
-      handleAddMarker();
-    }
-  };
-
 
 
   const saveToGallery = async (photoUri: string) => {
@@ -158,6 +153,12 @@ const MapPage = ({ navigation, route }: any) => {
   };
 
 
+  const handleAddMarkerAndSaveToGallery = async () => {
+    if (currentLocation && capturedImage) {
+      await saveToGallery(capturedImage);
+      handleAddMarker();
+    }
+  };
 
   async function getPlaces() {
     return onValue(ref(db, '/places'), (snapshot) => {
@@ -178,6 +179,11 @@ const MapPage = ({ navigation, route }: any) => {
 
     });
   }
+
+  useEffect(() => {
+    getPlaces()
+    handleAddMarkerAndSaveToGallery();
+  }, [currentLocation, capturedImage]);
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
@@ -267,7 +273,7 @@ const MapPage = ({ navigation, route }: any) => {
                       </TouchableOpacity>
                     </View>
                     {markerPress && (
-                       <TouchableNativeFeedback onPress={() => {navigation.navigate('Marker', {marker: markerPress})}}>
+                      <TouchableNativeFeedback onPress={() => {navigation.navigate('Marker', {marker: markerPress})}}>
                       <Image source={{ uri: markerPress.imagePath }} style={styles.modalImage} />
                       </TouchableNativeFeedback>
                     )}

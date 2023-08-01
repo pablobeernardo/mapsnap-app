@@ -20,8 +20,9 @@ export default function MarkerPage({ navigation, route }) {
             <View style={{ flex: 1, backgroundColor: 'black' }}>
                 <TouchableOpacity style={[styles.buttonGoBack]} onPress={handleGoBack}>
                     <Text>Voltar</Text>
-                </TouchableOpacity>
+                
                 <ImageViewer imageUrls={image} />
+                </TouchableOpacity>
             </View>
         </SafeAreaView>
     )

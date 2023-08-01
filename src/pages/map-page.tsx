@@ -126,7 +126,6 @@ const MapPage = ({ navigation, route }: any) => {
         photoDate: formattedDate,
         title: ''
       };
-      setMarkers([...markers, newMarker]);
       push(ref(db, 'places'), newMarker);
     }
   };
@@ -273,7 +272,7 @@ const MapPage = ({ navigation, route }: any) => {
                       </TouchableOpacity>
                     </View>
                     {markerPress && (
-                      <TouchableNativeFeedback onPress={() => {navigation.navigate('Marker', {marker: markerPress})}}>
+                      <TouchableNativeFeedback onPress={() => {setModalVisible(false), navigation.navigate('Marker', {marker: markerPress})}}>
                       <Image source={{ uri: markerPress.imagePath }} style={styles.modalImage} />
                       </TouchableNativeFeedback>
                     )}

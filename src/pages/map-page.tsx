@@ -25,6 +25,7 @@ import { onValue, push, ref, remove, update } from 'firebase/database';
 import { app, db } from '../../firebase-config'
 import * as firebaseStorage from '@firebase/storage'
 import { Camera } from 'expo-camera';
+import { getStorageData } from '../shared/secury-storage';
 
 
 const MapPage = ({ navigation, route }: any) => {
@@ -119,12 +120,13 @@ const MapPage = ({ navigation, route }: any) => {
 
 
       const newMarker: MarkerEntity = {
-        id: '',
+        id: Math.random().toString(),
         coords: { latitude: currentLocation.latitude, longitude: currentLocation.longitude },
         imagePath: await uploadImage(capturedImage),
         description: '',
         photoDate: formattedDate,
-        title: ''
+        title: '',
+        author: await getStorageData('author')
       };
       push(ref(db, 'places'), newMarker);
     }
@@ -276,7 +278,8 @@ const MapPage = ({ navigation, route }: any) => {
                       <Image source={{ uri: markerPress.imagePath }} style={styles.modalImage} />
                       </TouchableNativeFeedback>
                     )}
-                    <Text style={styles.dateStyle}>{photoDate}</Text>
+                    <Text style={styles.dateStyle}>Data: {photoDate}</Text>
+                    <Text style={styles.dateStyle}>Autor: {markerPress.author}</Text>
 
 
                     {isEditing ? (
@@ -327,6 +330,13 @@ const MapPage = ({ navigation, route }: any) => {
                           onPress={showModalConfirmDialog}
                         >
                           <Text style={styles.buttonText}>Deletar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.deleteButton, { backgroundColor: '#FF0000' }]}
+                          onPress={() => 
+                          navigation.navigate('ChatPage', {  marker: markerPress})                          }
+                        >
+                          <Text style={styles.buttonText}>Chat</Text>
                         </TouchableOpacity>
                       </Animatable.View>
                     </View>

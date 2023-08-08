@@ -17,6 +17,7 @@
     "expo-image-picker": "^14.1.1",
     "expo-location": "^15.1.1",
     "expo-media-library": "~15.2.3",
+    "expo-secure-store": "^12.3.1",
     "expo-status-bar": "~1.4.4",
     "firebase": "^10.1.0",
     "install": "^0.13.0",

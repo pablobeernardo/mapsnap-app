@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Image, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, Image, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import ChatEntity from '../entities/chat-entity';
 import { onValue, push, ref } from 'firebase/database';
 import { db } from '../../firebase-config';
@@ -57,6 +57,10 @@ const ChatPage = ({ navigation, route }) => {
   }
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
     <View style={styles.container}>
       <View style={styles.chatContainer}>
         <FlatList
@@ -64,16 +68,20 @@ const ChatPage = ({ navigation, route }) => {
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
+            <View style={{flexDirection:'row', justifyContent:'flex-end', alignItems:'center', marginHorizontal:3}}>
+            <View style={styles.ImageName}>
+            <Image
+              style={styles.authorImage}
+              source={{ uri: item.sender === author ? 'https://thinksport.com.au/wp-content/uploads/2020/01/avatar-.jpg' : 'https://st3.depositphotos.com/19428878/36416/v/450/depositphotos_364169666-stock-illustration-default-avatar-profile-icon-vector.jpg' }}
+            />
+            <Text style={styles.authorName}>{item.sender}</Text>
+            </View>
             <View style={[styles.messageBubble, item.sender === author ? styles.userBubble : styles.otherBubble]}>
-              <Image
-                style={styles.authorImage}
-                source={{ uri: item.sender === author ? 'URL_DA_IMAGEM_DO_AUTOR' : 'URL_DA_IMAGEM_OUTRO_AUTOR' }}
-              />
-              <View style={styles.messageContent}>
-                <Text style={styles.authorName}>{item.sender}</Text>
+              <View style={styles.messageContent}> 
                 <Text style={styles.messageText}>{item.message}</Text>
                 <Text style={styles.timestamp}>{new Date(item.data).toLocaleTimeString()}</Text>
               </View>
+            </View>
             </View>
           )}
           contentContainerStyle={styles.messageList}
@@ -91,6 +99,7 @@ const ChatPage = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
     </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -109,38 +118,46 @@ const styles = StyleSheet.create({
   messageBubble: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    maxWidth: '70%',
+    maxWidth: '40%',
     padding: 10,
     borderRadius: 10,
     marginVertical: 5,
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: '#007BFF',
+    backgroundColor: '#EDEDED',
   },
   otherBubble: {
     alignSelf: 'flex-start',
     backgroundColor: '#EDEDED',
   },
+  ImageName:{
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
   authorImage: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    marginRight: 8,
+    marginHorizontal: 10
+  
   },
   authorName: {
     fontSize: 12,
-    color: 'gray',
+    color: 'black',
+    marginTop: 3
   },
   messageContent: {
     flex: 1,
+    alignItems: 'flex-start',
+    marginLeft: 5,
   },
   messageText: {
-    color: 'white',
+    color: 'black',
   },
   timestamp: {
     fontSize: 12,
-    color: 'gray',
+    color: 'black',
     alignSelf: 'flex-end',
     marginTop: 2,
   },
@@ -162,7 +179,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   sendButton: {
-    backgroundColor: '#007BFF',
+    backgroundColor: '#303F9F',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,

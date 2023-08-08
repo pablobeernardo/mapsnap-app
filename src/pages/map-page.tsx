@@ -269,16 +269,23 @@ const MapPage = ({ navigation, route }: any) => {
                     useNativeDriver
                   >
                     <View style={styles.modalHeader}>
+                      <TouchableOpacity
+                        style={[styles.chatButton, { backgroundColor: '#25D366' }]}
+                        onPress={() =>
+                          navigation.navigate('ChatPage', { marker: markerPress }, setModalVisible(false))}
+                      >
+                        <Text style={styles.buttonText}>Chat</Text>
+                      </TouchableOpacity>
                       <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
                         <MaterialIcons name="close" size={24} color="black" />
                       </TouchableOpacity>
                     </View>
                     {markerPress && (
-                      <TouchableNativeFeedback onPress={() => {setModalVisible(false), navigation.navigate('Marker', {marker: markerPress})}}>
-                      <Image source={{ uri: markerPress.imagePath }} style={styles.modalImage} />
+                      <TouchableNativeFeedback onPress={() => { setModalVisible(false), navigation.navigate('Marker', { marker: markerPress }) }}>
+                        <Image source={{ uri: markerPress.imagePath }} style={styles.modalImage} />
                       </TouchableNativeFeedback>
                     )}
-                    <Text style={styles.dateStyle}>Data: {photoDate}</Text>
+                    <Text style={styles.dateStyle}>Data: {markerPress.photoDate}</Text>
                     <Text style={styles.dateStyle}>Autor: {markerPress.author}</Text>
 
 
@@ -330,13 +337,6 @@ const MapPage = ({ navigation, route }: any) => {
                           onPress={showModalConfirmDialog}
                         >
                           <Text style={styles.buttonText}>Deletar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.deleteButton, { backgroundColor: '#FF0000' }]}
-                          onPress={() => 
-                          navigation.navigate('ChatPage', {  marker: markerPress})                          }
-                        >
-                          <Text style={styles.buttonText}>Chat</Text>
                         </TouchableOpacity>
                       </Animatable.View>
                     </View>
@@ -402,7 +402,8 @@ const styles = StyleSheet.create({
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
   closeButton: {
     backgroundColor: 'white',
@@ -463,6 +464,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 5,
   },
+
+  chatButton: {
+    backgroundColor: '#25D366',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    alignItems: 'center'
+
+  },
+
   buttonText: {
     color: '#FFFFFF',
   },

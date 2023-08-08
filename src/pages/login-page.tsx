@@ -17,8 +17,8 @@ const LoginPage = ({ navigation }) => {
     }
   };
 
-  function login() {
-    setStorageData('author', author);
+  async function login() {
+    await setStorageData('author', author);
 
     navigation.navigate('MapPage');
 

@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Image, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import ChatEntity from '../entities/chat-entity';
 import { onValue, push, ref } from 'firebase/database';
-import { db } from '../../firebase-config';
 import { getStorageData } from '../shared/secury-storage';
+import { db } from '../../firebase-config';
 
 const ChatPage = ({ navigation, route }) => {
   const [messages, setMessages] = useState<ChatEntity[]>([]);
@@ -23,20 +23,20 @@ const ChatPage = ({ navigation, route }) => {
 
   async function getMessages() {
     onValue(ref(db, `/messages/${route.params.marker.id}`), (snapshot) => {
-        try {
-            setMessages([]);
-            if (snapshot !== undefined) {
-              snapshot.forEach((childSnapshot) => {
-    
-                const childkey = childSnapshot.key;
-                let childValue = childSnapshot.val();
-                childValue.id = childkey;
-                setMessages((messages) => [...messages, (childValue as ChatEntity)])
-              });
-            }
-          } catch (e) {
-            console.log(e);
-          }
+      try {
+        setMessages([]);
+        if (snapshot !== undefined) {
+          snapshot.forEach((childSnapshot) => {
+
+            const childkey = childSnapshot.key;
+            let childValue = childSnapshot.val();
+            childValue.id = childkey;
+            setMessages((messages) => [...messages, (childValue as ChatEntity)])
+          });
+        }
+      } catch (e) {
+        console.log(e);
+      }
     });
   }
 
@@ -57,48 +57,46 @@ const ChatPage = ({ navigation, route }) => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-    <View style={styles.container}>
-      <View style={styles.chatContainer}>
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={{flexDirection:'row', justifyContent:'flex-end', alignItems:'center', marginHorizontal:3}}>
-            <View style={styles.ImageName}>
-            <Image
-              style={styles.authorImage}
-              source={{ uri: item.sender === author ? 'https://thinksport.com.au/wp-content/uploads/2020/01/avatar-.jpg' : 'https://st3.depositphotos.com/19428878/36416/v/450/depositphotos_364169666-stock-illustration-default-avatar-profile-icon-vector.jpg' }}
-            />
-            <Text style={styles.authorName}>{item.sender}</Text>
-            </View>
-            <View style={[styles.messageBubble, item.sender === author ? styles.userBubble : styles.otherBubble]}>
-              <View style={styles.messageContent}> 
-                <Text style={styles.messageText}>{item.message}</Text>
-                <Text style={styles.timestamp}>{new Date(item.data).toLocaleTimeString()}</Text>
+    <KeyboardAvoidingView style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <View style={styles.container}>
+        <View style={styles.chatContainer}>
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginHorizontal: 3 }}>
+                <View style={styles.ImageName}>
+                  <Image
+                    style={styles.authorImage}
+                    source={{ uri: item.sender === author ? 'https://thinksport.com.au/wp-content/uploads/2020/01/avatar-.jpg' : 'https://st3.depositphotos.com/19428878/36416/v/450/depositphotos_364169666-stock-illustration-default-avatar-profile-icon-vector.jpg' }}
+                  />
+                  <Text style={styles.authorName}>{item.sender}</Text>
+                </View>
+                <View style={[styles.messageBubble, item.sender === author ? styles.userBubble : styles.otherBubble]}>
+                  <View style={styles.messageContent}>
+                    <Text style={styles.messageText}>{item.message}</Text>
+                    <Text style={styles.timestamp}>{new Date(item.data).toLocaleTimeString()}</Text>
+                  </View>
+                </View>
               </View>
-            </View>
-            </View>
-          )}
-          contentContainerStyle={styles.messageList}
-        />
+            )}
+            contentContainerStyle={styles.messageList}
+          />
+        </View>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Digite sua mensagem..."
+            value={inputMessage}
+            onChangeText={setInputMessage}
+          />
+          <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+            <Text style={styles.buttonText}>Enviar</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Digite sua mensagem..."
-          value={inputMessage}
-          onChangeText={setInputMessage}
-        />
-        <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-          <Text style={styles.buttonText}>Enviar</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
     </KeyboardAvoidingView>
   );
 };
@@ -131,7 +129,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: '#EDEDED',
   },
-  ImageName:{
+  ImageName: {
     flexDirection: 'column',
     alignItems: 'center',
   },
@@ -140,7 +138,7 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     marginHorizontal: 10
-  
+
   },
   authorName: {
     fontSize: 12,

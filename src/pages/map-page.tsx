@@ -22,10 +22,10 @@ import * as Animatable from 'react-native-animatable';
 import { MarkerEntity } from '../entities/marker-entity';
 import { format } from 'date-fns';
 import { onValue, push, ref, remove, update } from 'firebase/database';
-import { app, db } from '../../firebase-config'
 import * as firebaseStorage from '@firebase/storage'
 import { Camera } from 'expo-camera';
 import { getStorageData } from '../shared/secury-storage';
+import { app, db } from '../../firebase-config';
 
 
 const MapPage = ({ navigation, route }: any) => {

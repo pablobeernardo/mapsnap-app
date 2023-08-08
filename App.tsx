@@ -15,9 +15,9 @@ const AppNavigator = () => {
       <Stack.Navigator initialRouteName='LoginPage' screenOptions={{ headerShown: false }}>
         <Stack.Screen name="CamPage" component={CamPage} />
         <Stack.Screen name="MapPage" component={MapPage} initialParams={{ capturedImage: null }} />
-        <Stack.Screen name="Marker"  component={MarkerPage} />
-        <Stack.Screen name="LoginPage"  component={LoginPage} />
-        <Stack.Screen name="ChatPage"  component={ChatPage} options={{ headerShown: true}}/>
+        <Stack.Screen name="Marker" component={MarkerPage} />
+        <Stack.Screen name="LoginPage" component={LoginPage} />
+        <Stack.Screen name="ChatPage" component={ChatPage} options={{ headerShown: true }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

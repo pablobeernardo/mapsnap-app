@@ -89,10 +89,24 @@ const ChatPage = ({ navigation, route }) => {
                   <Text style={styles.authorName}>{item.sender}</Text>
                 </View>
               )}
-              <View style={styles.messageContent}>
+              <View style={[
+                styles.messageContent,
+                item.sender === author ? styles.sentMessageContent : styles.receivedMessageContent,
+              ]}>
                 <Text style={styles.messageText}>{item.message}</Text>
                 <Text style={styles.timestamp}>{new Date(item.data).toLocaleTimeString()}</Text>
               </View>
+              {item.sender === author && (
+                <View style={styles.avatarContainer}>
+                  <Image
+                    style={styles.profileImage}
+                    source={{
+                      uri: 'https://st3.depositphotos.com/19428878/36416/v/450/depositphotos_364169666-stock-illustration-default-avatar-profile-icon-vector.jpg',
+                    }}
+                  />
+                  <Text style={styles.authorName}>{item.sender}</Text>
+                </View>
+              )}
             </View>
           )}
           contentContainerStyle={styles.messageList}
@@ -100,7 +114,7 @@ const ChatPage = ({ navigation, route }) => {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Diite sua mensagem..."
+            placeholder="Digite sua mensagem..."
             value={inputMessage}
             onChangeText={setInputMessage}
           />
@@ -112,6 +126,7 @@ const ChatPage = ({ navigation, route }) => {
     </KeyboardAvoidingView>
   );
 };
+
 
 
 
@@ -154,6 +169,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    marginLeft: 5
   },
   messageContent: {
     flex: 1,
@@ -167,6 +183,18 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 14,
     color: 'black',
+  },
+  sentMessageContent: {
+    backgroundColor: '#303F9F',
+    borderColor: '#303F9F',
+    alignSelf: 'flex-end',
+    marginLeft: 50, 
+  },
+  receivedMessageContent: {
+    backgroundColor: 'white',
+    borderColor: '#E0E0E0',
+    alignSelf: 'flex-start',
+    marginRight: 50, 
   },
   timestamp: {
     fontSize: 12,

@@ -9,9 +9,9 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
-import ChatEntity from '../entities/chat-entity';
-import { onValue, push, ref } from 'firebase/database';
+import { onValue, push, ref, update, remove } from 'firebase/database';
 import { getStorageData } from '../shared/secury-storage';
 import { db } from '../../firebase-config';
 
@@ -20,6 +20,8 @@ const ChatPage = ({ navigation, route }) => {
   const [inputMessage, setInputMessage] = useState('');
   const flatListRef = useRef(null);
   const [author, setAuthor] = useState('');
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
 
   useEffect(() => {
     getAuthor();
@@ -55,7 +57,7 @@ const ChatPage = ({ navigation, route }) => {
       return;
     }
 
-    const newMessage: ChatEntity = {
+    const newMessage = {
       id: Math.random().toString(),
       data: Date.now(),
       message: inputMessage,
@@ -66,18 +68,66 @@ const ChatPage = ({ navigation, route }) => {
     setInputMessage('');
   }
 
+  const handleLongPress = (message) => {
+    setSelectedMessage(message);
+  };
+
+  const handleEdit = (message) => {
+    setSelectedMessage(null);
+    setEditingMessage(message);
+    setInputMessage(message.message);
+  };
+
+  const handleDelete = async (message) => {
+    setSelectedMessage(null);
+
+    try {
+      await remove(ref(db, `messages/${route.params.marker.id}/${message.id}`));
+      setMessages(messages.filter((msg) => msg.id !== message.id));
+    } catch (error) {
+      console.error('Erro ao excluir a mensagem:', error);
+    }
+  };
+
+  const handleUpdateMessage = async () => {
+    if (editingMessage && inputMessage.trim() !== '') {
+      try {
+        await update(ref(db, `messages/${route.params.marker.id}/${editingMessage.id}`), {
+          message: inputMessage,
+        });
+        setMessages(
+          messages.map((msg) =>
+            msg.id === editingMessage.id ? { ...msg, message: inputMessage } : msg
+          )
+        );
+        setEditingMessage(null);
+        setInputMessage('');
+      } catch (error) {
+        console.error('Erro ao atualizar a mensagem:', error);
+      }
+    }
+  };
+
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <View style={styles.chatContainer}>
         <FlatList
           ref={flatListRef}
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={[
-              styles.messageContainer,
-              item.sender === author ? styles.sentMessageContainer : styles.receivedMessageContainer,
-            ]}>
+            <TouchableOpacity
+              onLongPress={() => handleLongPress(item)}
+              style={[
+                styles.messageContainer,
+                item.sender === author
+                  ? styles.sentMessageContainer
+                  : styles.receivedMessageContainer,
+              ]}
+            >
               {item.sender !== author && (
                 <View style={styles.avatarContainer}>
                   <Image
@@ -89,12 +139,16 @@ const ChatPage = ({ navigation, route }) => {
                   <Text style={styles.authorName}>{item.sender}</Text>
                 </View>
               )}
-              <View style={[
-                styles.messageContent,
-                item.sender === author ? styles.sentMessageContent : styles.receivedMessageContent,
-              ]}>
+              <View
+                style={[
+                  styles.messageContent,
+                  item.sender === author ? styles.sentMessageContent : styles.receivedMessageContent,
+                ]}
+              >
                 <Text style={styles.messageText}>{item.message}</Text>
-                <Text style={styles.timestamp}>{new Date(item.data).toLocaleTimeString()}</Text>
+                <Text style={styles.timestamp}>
+                  {new Date(item.data).toLocaleTimeString()}
+                </Text>
               </View>
               {item.sender === author && (
                 <View style={styles.avatarContainer}>
@@ -107,7 +161,7 @@ const ChatPage = ({ navigation, route }) => {
                   <Text style={styles.authorName}>{item.sender}</Text>
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           )}
           contentContainerStyle={styles.messageList}
         />
@@ -123,12 +177,47 @@ const ChatPage = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       </View>
+      <Modal
+        visible={selectedMessage !== null}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.modalContainer}>
+          <TouchableOpacity onPress={() => handleEdit(selectedMessage)} style={styles.modalButton}>
+            <Text style={styles.modalButtonText}>Editar Mensagem</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleDelete(selectedMessage)} style={styles.modalButton}>
+            <Text style={styles.modalButtonText}>Excluir Mensagem</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setSelectedMessage(null)} style={styles.modalButton}>
+            <Text style={styles.modalButtonText}>Cancelar</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+      {editingMessage && (
+        <Modal
+          visible={true}
+          animationType="slide"
+          transparent={true}
+        >
+          <View style={styles.modalContainer}>
+            <TextInput
+              style={styles.editInput}
+              value={inputMessage}
+              onChangeText={setInputMessage}
+            />
+            <TouchableOpacity style={styles.saveButton} onPress={handleUpdateMessage}>
+              <Text style={styles.saveButtonText}>Salvar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setEditingMessage(null)} style={styles.modalButton}>
+              <Text style={styles.modalButtonText}>Cancelar Edição</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      )}
     </KeyboardAvoidingView>
   );
 };
-
-
-
 
 const styles = StyleSheet.create({
   container: {
@@ -188,13 +277,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#303F9F',
     borderColor: '#303F9F',
     alignSelf: 'flex-end',
-    marginLeft: 50, 
+    marginLeft: 50,
   },
   receivedMessageContent: {
     backgroundColor: 'white',
     borderColor: '#E0E0E0',
     alignSelf: 'flex-start',
-    marginRight: 50, 
+    marginRight: 50,
   },
   timestamp: {
     fontSize: 12,
@@ -229,6 +318,53 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalButton: {
+    backgroundColor: 'white',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    marginVertical: 5,
+    width: '80%',
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    color: '#303F9F',
+  },
+  saveButton: {
+    backgroundColor: '#303F9F',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginVertical: 10,
+    width: '80%',
+    alignItems:'center',
+
+  },
+  saveButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+
+  },
+  editInput: {
+    height: 200,
+    width:'80%',
+    borderWidth: 1,
+    borderColor: '#303F9F', 
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    marginRight: 10,
+    marginTop:10,
+    backgroundColor: 'white',
+    color: 'black',  
+    textAlign: 'center',
   },
 });
 
